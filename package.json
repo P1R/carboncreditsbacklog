@@ -1,0 +1,32 @@
+{
+  "name": "decascarboncreditsbacklog",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "NeetSec",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "inquirer": "^7.1.0",
+    "ipfs": "^0.42.1",
+    "ipfs-http-client": "^43.0.1",
+    "moment": "^2.24.0",
+    "node-object-hash": "^2.0.0",
+    "orbit-db": "^0.24.1",
+    "orbit-db-docstore": "^1.9.0",
+    "orbit-db-store": "^3.3.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@gitlab.com/deca-currency/decascarboncreditsbacklog.git"
+  },
+  "bugs": {
+    "url": "https://gitlab.com/deca-currency/decascarboncreditsbacklog/issues"
+  },
+  "homepage": "https://gitlab.com/deca-currency/decascarboncreditsbacklog",
+  "description": "OrbitDB Carbon Credit Interface for DECA"
+}

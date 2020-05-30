@@ -1,0 +1,13 @@
+[Unit]
+Description=Public Node Updater
+
+[Service]
+WorkingDirectory=/home/nodemaster/orbitdb4cc/
+ExecStart=/usr/local/bin/node /home/nodemaster/orbitdb4cc/index.js
+User=nodemaster
+Restart=always
+LimitNOFILE=10240
+
+[Install]
+WantedBy=multi-user.target
+
