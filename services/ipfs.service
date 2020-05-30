@@ -1,0 +1,11 @@
+[Unit]
+Description=IPFS Daemon
+
+[Service]
+ExecStart=/usr/local/bin/ipfs daemon --enable-pubsub-experiment
+User=nodemaster
+Restart=always
+LimitNOFILE=10240
+
+[Install]
+WantedBy=multi-user.target
