@@ -91,7 +91,7 @@ const main = async () => {
             }
             while (true) {
                 await init();
-                console.clear();
+                //console.clear();
                 console.log('Select one to modify the field.\n');
                 let carbonCreditMenu = await generateData(carbonCredit, 0);
                 let { insertMenu } = await inquirer.prompt([{
@@ -111,42 +111,47 @@ const main = async () => {
                 }]);
                 if (insertMenu == 'Insert current register') {
                     if (await validateInsertion(carbonCredit)) {
-                        carbonCredit.conversionPrice = await divisaTraceback(
-                            moment.utc(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(),
-                            carbonCredit.cancelPrice.divisa,
-                            carbonCredit.cancelPrice.qty
-                        );
-                        showData(carbonCredit, 0);
-                        serialNoPart=carbonCredit.SerialNo.split('-');
-                        serialFloor=serialNoPart[7];
-                        serialTop=serialNoPart[8];
-                        var totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
-                        let { input } = await inquirer.prompt([{
-                            type: 'input',
-                            name: 'input',
-                            message: 'Data is correct, you will insert '+ String(totalCC) +" carbon credits y | n:",
-                        }]);
-                        if (input == 'y') {
-                            carbonCredit.issueDate = moment(carbonCredit.issueDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(); 
-                            carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
-                            const hash = await db.put(carbonCredit);
-                            console.log(`Successful insertion, CCID: ${carbonCredit.CCID}, hash: ${hash}.`);
-                            for(var i=parseInt(serialFloor)+1; i<=serialTop; i++){
-                                    var tempCarbonCredit = {...carbonCredit};
-                                    tempCarbonCredit.SerialNo= await asyncCCSerialNo(serialNoPart,i)
-                                    tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
-                                    const hash = await db.put(tempCarbonCredit);
-                                    console.log(`Successful insertion, CCID: ${tempCarbonCredit.CCID}, hash: ${hash}.`);
-                            }     
-                            console.log(`Inserted ${totalCC} carbon credits.`);
-                            break;
-                        } else {
-                            console.clear();
-                            console.log('Insertion aborted');
-                            break;
+                        try{
+                            carbonCredit.conversionPrice = await divisaTraceback(
+                                moment.utc(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(),
+                                carbonCredit.cancelPrice.divisa,
+                                carbonCredit.cancelPrice.qty
+                            );
+                            if(carbonCredit.conversionPrice === 'error') throw new Error('Error at getting currencies price.');
+                            showData(carbonCredit, 0);
+                            serialNoPart=carbonCredit.SerialNo.split('-');
+                            serialFloor=serialNoPart[7];
+                            serialTop=serialNoPart[8];
+                            var totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
+                            let { input } = await inquirer.prompt([{
+                                type: 'input',
+                                name: 'input',
+                                message: 'Data is correct, you will insert '+ String(totalCC) +" carbon credits y | n:",
+                            }]);
+                            if (input == 'y') {
+                                carbonCredit.issueDate = moment(carbonCredit.issueDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(); 
+                                carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
+                                const hash = await db.put(carbonCredit);
+                                console.log(`Successful insertion, CCID: ${carbonCredit.CCID}, hash: ${hash}.`);
+                                for(var i=parseInt(serialFloor)+1; i<=serialTop; i++){
+                                        var tempCarbonCredit = {...carbonCredit};
+                                        tempCarbonCredit.SerialNo= await asyncCCSerialNo(serialNoPart,i)
+                                        tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
+                                        const hash = await db.put(tempCarbonCredit);
+                                        console.log(`Successful insertion, CCID: ${tempCarbonCredit.CCID}, hash: ${hash}.`);
+                                }     
+                                console.log(`Inserted ${totalCC} carbon credits.`);
+                                break;
+                            } else {
+                                console.clear();
+                                console.log('Insertion aborted');
+                                break;
+                            }
+                        } catch(e) { 
+                            console.log(e.message);
                         }
                     }
                     else {
@@ -182,12 +187,14 @@ const main = async () => {
                         if (input == '') console.log('Input mustn\'t be empty');
                         else if (insertMenu == 'issueDate' || insertMenu == 'cancelDate' || insertMenu == 'ccVintageStart' || insertMenu == 'ccVintageEnd') {
                             const date = moment.utc(input + ' +0000', 'DD-MM-YYYY HH:mm');
-                            if (date.isValid() && insertMenu == 'cancelDate' && moment() >= date && date >= moment().subtract(10, 'days')) {
-                                carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
-                            }
-                            else if (date.isValid() && insertMenu != 'cancelDate' && moment() >= date) {
-                                carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
-                            } else console.log(' Date must follow next syntax: dd-mm-yyyy hh-mm and cancel date must be 10 days old at most');
+                            if(date.isValid() && moment() >= date) {
+                                if(insertMenu != 'cancelDate') carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
+                                else if((date >= moment().subtract(3, 'months') && process.env.API_MODE == 'dev') ||
+                                        (date >= moment().subtract(1, 'year') && process.env.API_MODE == 'startup') ||
+                                        (date >= moment().subtract(7, 'year') && process.env.API_MODE == 'grow')) {
+                                            carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
+                                } else console.error(' Date is too old to get pricing data');
+                            } else console.error(' Date must follow next syntax: dd-mm-yyyy hh-mm and can\'t be in the future');
                         }
                         else if (insertMenu == 'qty') {
                             if (parseFloat(input)) carbonCredit.cancelPrice[insertMenu] = input;
