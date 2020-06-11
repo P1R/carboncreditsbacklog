@@ -91,7 +91,7 @@ const main = async () => {
             }
             while (true) {
                 await init();
-                //console.clear();
+                console.clear();
                 console.log('Select one to modify the field.\n');
                 let carbonCreditMenu = await generateData(carbonCredit, 0);
                 let { insertMenu } = await inquirer.prompt([{
@@ -113,7 +113,7 @@ const main = async () => {
                     if (await validateInsertion(carbonCredit)) {
                         try{
                             carbonCredit.conversionPrice = await divisaTraceback(
-                                moment.utc(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(),
+                                moment.utc(carbonCredit.cancelDate, 'DD-MM-YYYY HH:mm Z'),
                                 carbonCredit.cancelPrice.divisa,
                                 carbonCredit.cancelPrice.qty
                             );
@@ -148,10 +148,10 @@ const main = async () => {
                             } else {
                                 console.clear();
                                 console.log('Insertion aborted');
-                                break;
+                                continue;
                             }
                         } catch(e) { 
-                            console.log(e.message);
+                            console.log(`Error at divisaTraceback: ${e.message}`);
                         }
                     }
                     else {
@@ -187,11 +187,12 @@ const main = async () => {
                         if (input == '') console.log('Input mustn\'t be empty');
                         else if (insertMenu == 'issueDate' || insertMenu == 'cancelDate' || insertMenu == 'ccVintageStart' || insertMenu == 'ccVintageEnd') {
                             const date = moment.utc(input + ' +0000', 'DD-MM-YYYY HH:mm');
-                            if(date.isValid() && moment() >= date) {
+                            console.log(date);
+                            if(date.isValid() && moment.utc() >= date) {
                                 if(insertMenu != 'cancelDate') carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
-                                else if((date >= moment().subtract(3, 'months') && process.env.API_MODE == 'dev') ||
-                                        (date >= moment().subtract(1, 'year') && process.env.API_MODE == 'startup') ||
-                                        (date >= moment().subtract(7, 'year') && process.env.API_MODE == 'grow')) {
+                                else if((date >= moment.utc().subtract(3, 'months') && process.env.APIMODE == 'dev') ||
+                                        (date >= moment.utc().subtract(1, 'year') && process.env.APIMODE == 'startup') ||
+                                        (date >= moment.utc().subtract(7, 'year') && process.env.APIMODE == 'grow')) {
                                             carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
                                 } else console.error(' Date is too old to get pricing data');
                             } else console.error(' Date must follow next syntax: dd-mm-yyyy hh-mm and can\'t be in the future');
@@ -529,7 +530,7 @@ const generateData = async (data, n) => {
             menu.push({ name: element, disabled: ' ' });
             menu = menu.concat(await generateData(data[element], n + 1));
         } else {
-            let space = ' '.repeat(20 - element.length);
+            let space = ' '.repeat(25 - element.length);
             space = space.substring(0, space.length - tab.length);
             menu.push(`${tab}${element}${space}${data[element]}`);
         }
