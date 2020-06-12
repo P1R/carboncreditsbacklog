@@ -3,7 +3,7 @@ const IpfsClient = require('ipfs-http-client');
 const OrbitDB = require('orbit-db');
 //Instance of ipfs locally in ipfs daemon
 const node = IpfsClient('http://localhost:5001');
-const addressDB = 'decaCCDB';
+const addressDB = '/orbitdb/zdpuAykPJ4qtBg2toS2vxr5eaPfGEBJmvGerM7V7x8qn5c8hW/decaCCDB';
 
 //Async function to replicate or create a doc database
 async function createReplicate() {
