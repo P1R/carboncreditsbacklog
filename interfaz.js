@@ -6,7 +6,7 @@ let moment = require('moment');
 let hasher = require('node-object-hash')
 const fs = require('fs');
 
-const addressDB = 'decaCCDB';
+const addressDB = '/orbitdb/zdpuAykPJ4qtBg2toS2vxr5eaPfGEBJmvGerM7V7x8qn5c8hW/decaCCDB';
 
 //A instance of ipfs locally in ipfs daemon
 const ipfs = IpfsClient('http://localhost:5001');
