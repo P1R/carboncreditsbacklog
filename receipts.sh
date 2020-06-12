@@ -21,7 +21,7 @@ case "$choice" in
 	*) echo "no option selected";;
 esac
 
-receiptsRoute=./receipts
+receiptsRoute=./proyectsReceipts
 echo ""
 echo "IPFS GET(Download) DECA's Carbon Credits Receipts?:"
 
@@ -40,3 +40,4 @@ case "$choice" in
 esac
 
 echo "Bye ;) $USERNAME"
+
