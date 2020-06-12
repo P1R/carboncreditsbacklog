@@ -40,13 +40,11 @@ const requestIteration = async(set, divisa, flag, timestamp, amount, resolution)
         if(flag) {
             opt.uri = `https://apiv2.bitcoinaverage.com/indices/global/history/${divisa}${set[element]}?at=${timestamp}&resolution=${resolution}`;
             let { average, time } = await request(opt);
-            if(res.time === undefined) res.time = moment.utc(time, 'YYYY-MM-DD HH:mm:ss').format('DD-MM-YYYY HH:mm Z');
             res[set[element]] = average * amount; 
         }
         else {
             opt.uri = `https://apiv2.bitcoinaverage.com/indices/global/history/${set[element]}${divisa}?at=${timestamp}&resolution=${resolution}`;
             let { average, time } = await request(opt);
-            if(res.time === undefined) res.time = moment.utc(time, 'YYYY-MM-DD HH:mm:ss').format('DD-MM-YYYY HH:mm Z');
             res[set[element]] = amount / average;
         }
     }

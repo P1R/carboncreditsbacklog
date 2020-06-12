@@ -5,6 +5,7 @@ let inquirer = require('inquirer');
 let moment = require('moment');
 let hasher = require('node-object-hash')
 const fs = require('fs');
+const path = require('path');
 
 const addressDB = 'decaCCDB';
 
@@ -17,6 +18,9 @@ const hashSortCoerce = hasher({ sort: true, coerce: true });
 
 //Function to start application
 const main = async () => {
+    if (!fs.existsSync('./receipts')){
+        fs.mkdirSync('./receipts');
+    }
     const orbitdb = await OrbitDB.createInstance(ipfs)
     const db = await orbitdb.docs(addressDB, { indexBy: 'CCID' });
     await db.load();
@@ -36,8 +40,10 @@ const main = async () => {
         }]);
         if (mainMenu == 'Show carbon credit records') {
             let data = db.get('');
+            console.log(` ${data.length} records found`);
             while (true) {
-                    let { showMenu } = await inquirer.prompt([{
+                const fileName = moment.utc().format();
+                let { showMenu } = await inquirer.prompt({
                     type: 'list',
                     name: 'showMenu',
                     message: 'Select an option',
@@ -45,24 +51,33 @@ const main = async () => {
                         'Show in terminal',
                         'Save as JSON',
                         'Save as CSV',
+                        'Save as TXT',
                         'Back to main menu'
                     ]
-                }]);
+                });
                 if (showMenu == 'Show in terminal') {
                     for (element in data) {
                         showData(data[element], 0);
                         console.log('-------------------------------------\n');
                     }
                 } else if (showMenu == 'Save as JSON') {
-                    fs.writeFileSync(`/tmp/${moment().format()}.json`, JSON.stringify(data));
-                    console.log(`File saved in /tmp/${moment().format()}.json`);
+                    fs.writeFileSync(path.resolve('receipts', `${fileName}.json`), JSON.stringify(data));
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.json')}`);
                 } else if (showMenu == 'Save as CSV') {
-                    let csv = '';
-                    for (element in data) csv += await JSONToCSV(data[element]);
-                    fs.writeFileSync(`/tmp/${moment().format()}.csv`, csv);
-                    console.log(`File saved in /tmp/${moment().format()}.csv`);
-                }
-                else if (showMenu == 'Back to main menu') {
+                    let csv = await JSONToCSV(data);
+                    fs.writeFileSync(path.resolve('receipts', `${fileName}.csv`), csv);
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.csv')}`);
+                } else if (showMenu == 'Save as TXT') {
+                    let stream = fs.createWriteStream(path.resolve('receipts', `${fileName}.txt`));
+                    let result = await elemInsert(data);
+                    stream.once('open', function (fd) {
+                        for (let i = 0; i < result.length; i++) {
+                            stream.write(result[i] + '\n');
+                        }
+                        stream.end();
+                    });
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.txt')}`);
+                } else if (showMenu == 'Back to main menu') {
                     break;
                 }
             }
@@ -91,7 +106,7 @@ const main = async () => {
             }
             while (true) {
                 await init();
-                console.clear();
+                //console.clear();
                 console.log('Select one to modify the field.\n');
                 let carbonCreditMenu = await generateData(carbonCredit, 0);
                 let { insertMenu } = await inquirer.prompt([{
@@ -122,7 +137,7 @@ const main = async () => {
                             serialNoPart=carbonCredit.SerialNo.split('-');
                             serialFloor=serialNoPart[7];
                             serialTop=serialNoPart[8];
-                            var totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
+                            let totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
                             let { input } = await inquirer.prompt([{
                                 type: 'input',
                                 name: 'input',
@@ -132,18 +147,25 @@ const main = async () => {
                                 carbonCredit.issueDate = moment(carbonCredit.issueDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
                                 carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
                                 carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                                carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(); 
-                                carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
-                                const hash = await db.put(carbonCredit);
-                                console.log(`Successful insertion, CCID: ${carbonCredit.CCID}, hash: ${hash}.`);
-                                for(var i=parseInt(serialFloor)+1; i<=serialTop; i++){
-                                        var tempCarbonCredit = {...carbonCredit};
-                                        tempCarbonCredit.SerialNo= await asyncCCSerialNo(serialNoPart,i)
+                                carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                const fileName = moment().format();
+                                let stream = fs.createWriteStream(path.resolve('receipts', fileName + '.txt'));
+                                stream.once('open', async function (fd) {
+                                    carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
+                                    const hash = await db.put(carbonCredit);
+                                    stream.write('CCID: ' + carbonCredit.CCID + ' SerialNo: ' + carbonCredit.SerialNo + '\n');
+                                    for (let i = parseInt(serialFloor) + 1; i <= serialTop; i++) {
+                                        let tempCarbonCredit = {
+                                            ...carbonCredit
+                                        };
+                                        tempCarbonCredit.SerialNo = await asyncCCSerialNo(serialNoPart, i)
                                         tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
                                         const hash = await db.put(tempCarbonCredit);
-                                        console.log(`Successful insertion, CCID: ${tempCarbonCredit.CCID}, hash: ${hash}.`);
-                                }     
+                                    }
+                                    stream.end();
+                                });
                                 console.log(`Inserted ${totalCC} carbon credits.`);
+                                console.log(`Receipts saved in ${path.resolve('receipts', fileName + '.txt')}`);
                                 break;
                             } else {
                                 console.clear();
@@ -522,6 +544,14 @@ const elemSearch = async (objectSearch) => {
     return elems;
 }
 
+const elemInsert = async (objectShow) => {
+    let elems = [];
+    for (let key in objectShow) {
+        elems.push('CCID: ' + objectShow[key]['CCID'] + ' SerialNumber: ' + objectShow[key]['SerialNo']);
+    }
+    return elems;
+}
+
 const generateData = async (data, n) => {
     let menu = [];
     let tab = '    '.repeat(n);
@@ -583,14 +613,28 @@ const showErrorData = async (data) => {
 
 //Parse json to csv
 const JSONToCSV = async (data, n) => {
-    let csv = '';
-    for (element in data) {
-        if (typeof (data[element]) == 'object') {
-            validateInsertion(data[element]);
+    let csv;
+    for (element in data[0]) {
+        console.log(typeof(data[0][element]));
+        console.log(data[0][element]);
+        if (typeof data[0][element] == 'object') {
+            console.log('Entro aqui')
+            for(subelement in data[0][element]) csv += `${element} - ${subelement}, `;
         }
-        else csv += `${data[element]}, `
+        else csv += `${element}, `;
     }
-    if (n == 0) csv += '\n';
+    csv = csv.slice(0, -2); 
+    csv += '\n';
+    for(record in data) {
+        for (element in data[record]) {
+            if (typeof data[record][element] == 'object') {
+                for(subelement in data[0][element]) csv += `${data[record][element][subelement]}, `;
+            }
+            else csv += `${data[record][element]}, `;
+        }
+        csv = csv.slice(0, -2); 
+        csv += '\n';
+    }
     return csv;
 }
 
