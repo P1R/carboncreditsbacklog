@@ -15,39 +15,40 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
 ## Carbon Credit Structure
 
 ```sh
-{
 /*
   CC - Carbon credits
   Unix Time is date and time based in the UTC 0
   example for the first carbon credit that is 1365209
 */
-  SerialNo: 'GS1-1-MX-GS2441-16-2018-17438-328-328',
-  CCAddress: 'https://registry.goldstandard.org/credit-blocks/details/107995', //Address GS Registry
-  issueDate: 1552953600, // CC creation UnixTime
-  cancelDate: 1587214800, // CC cancelation cancelation UnixTime
-  ccVintageStart: 1514764800, // CC what year it was created in UnixTime
-  ccVintageEnd: 1514764800, // CC what year it was created in UnixTime
-  ccCategory: 'Energy Efficiency - Domestic', // CC category agricultural
-  ccMeasurement: 'VER(TCO2e)', //CC Measurement
-  ccStandard: 'GS', // CC standard Woodland Carbon Credit  
-  countryCode: 'MX' // Country code
-  ccProjectID: 'GS2441', // CC project ID in the original backlog is it unique?
-  ccID: 17438-328-328,
-  CCAdquisitionRecipt: 'QmWWQSuPMS6aXCbZKpEjPHPUZN2NjB3YrhJTHsV4X3vb2t', //Recipt of CC in IPFS
-  cancelPrice: {
-    qty: 19.50, 
-    divisa : 'USD'},
-  conversionPrice:{
-    USD: 19.50,
-    EUR: 17.93,
-    CNY: 137.93,
-    BTC: 0.0027,
-    LTC: 0.45,
-    ETH: 0.11,
-  },
-  cancelRemaks: 'Cancel by account 1067262',
-} 
-
+[
+  {
+    //CCID: unique Carbon Credit Hash in DECAs registry (used as receipt and control)
+    CCID: 'a67178fa3cb20e49f748050871f4f10784693bde1b9ec805740ff9c63b93860d', 
+    SerialNo: 'GS1-1-MX-GS2441-16-2018-17438-328-328',
+    ccAddress: 'https://registry.goldstandard.org/credit-blocks/details/107995', //Address GS Registry
+    issueDate: 1552953600, // CC creation UnixTime
+    cancelDate: 1587168000, // CC cancelation cancelation UnixTime
+    ccCategory: 'Energy Efficiency - Domestic', // CC category agricultural
+    ccStandard: 'GS', // CC standard GoldStandard Carbon Credit
+    cancelPrice: { qty: '19.5', divisa: 'USD' },
+    ccProjectID: 'GS2441', // CC project ID in the original backlog
+    countryCode: 'MX', // Country code
+    cancelRemaks: 'Cancel by account 1067262',
+    ccVintageEnd: 1546214400, // CC what end date it was created in UnixTime
+    ccMeasurement: 'VER(TCO2e)', //CC Measurement
+    ccVintageStart: 1514764800, // CC what date year it was created in UnixTime
+    conversionPrice: {
+      BTC: 0.0027239430402556876,
+      CNY: 137.92740063195478,
+      ETH: 0.10952545708624091,
+      EUR: 17.93351483640976,
+      GBP: 15.588145399888809,
+      LTC: 0.45310691929120134,
+      USD: 19.5
+    },
+    CCAdquisitionRecipt: 'QmYw6JTNABDDfXvc3U2BfURjF5Zzx9eG3N43wJqHc4upDL' //Recipt of CC in IPFS
+  }
+]
 ```
 
 ## Requirements
@@ -281,3 +282,37 @@ WantedBy=multi-user.target
 ```
 **NOTE: service must be set as active (running), if not please verify the preview steps**
 
+# IPFS pin projects receipts
+
+**You can help us by pinning  DECA's project receipts into IPFS which will give deeper trust to DECA.**
+
+We have a script in order to pin (replicate into your node) the projects receipts that DECA got, so that
+any one can have a proof that we bought this receipts as public information. Also you can store a copy of this receipts which will be added by IPFS hash into this script. 
+
+> run the IPFS pin script
+
+```sh
+ $ /receipts.sh 
+connect Qmd4Cv2fNwixP6cabEnTVFkF57GUGD6VBEcDhUkqHPG4X9 success
+connect QmfBASmqe3Az9AUjCxx3dtomSmbZEiJCsXusPxznjNnjU5 success
+connect QmQBAsbA49q7QrKhetJpbo5gKxQQiL6sxVXCep5skmuHsq success
+connect QmZL1otpiCzWMEJTHXbQ5Hb4aFE7TKLjAuuBAAet1WAgtD success
+
+IPFS PIN DECA's Carbon Credits Receipts?:
+Enter Y for Yes, N for No:Y
+Pinning Receipts by IPFS hash
+pinned QmYw6JTNABDDfXvc3U2BfURjF5Zzx9eG3N43wJqHc4upDL recursively
+
+IPFS GET(Download) DECA's Carbon Credits Receipts?:
+Enter Y for Yes, N for No:Y
+Getting Receipts by IPFS hash
+Default receipts file is ./receipts...
+Saving file(s) to ./proyectsReceipts
+ 135.34 KiB / 135.34 KiB [======================================================================================================================================] 100.00% 0s
+Bye ;) 
+
+$ ls proyectsReceipts 
+QmYw6JTNABDDfXvc3U2BfURjF5Zzx9eG3N43wJqHc4upDL
+```
+
+As you can see in the above example we pin the receipt by running " ./receipts.sh ", also we Download this receipt with should be allocated in the directory projects Receipts.
