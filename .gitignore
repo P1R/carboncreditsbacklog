@@ -4,3 +4,4 @@
 /proyectsReceipts
 package-lock.json
 .env
+.directory

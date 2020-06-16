@@ -7,7 +7,7 @@ let hasher = require('node-object-hash')
 const fs = require('fs');
 const path = require('path');
 
-const addressDB = '/orbitdb/zdpuAykPJ4qtBg2toS2vxr5eaPfGEBJmvGerM7V7x8qn5c8hW/decaCCDB';
+const addressDB = 'decaCCDB';
 
 //A instance of ipfs locally in ipfs daemon
 const ipfs = IpfsClient('http://localhost:5001');
@@ -213,8 +213,8 @@ const main = async () => {
                             if(date.isValid() && moment.utc() >= date) {
                                 if(insertMenu != 'cancelDate') carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
                                 else if((date >= moment.utc().subtract(3, 'months') && process.env.APIMODE == 'dev') ||
-                                        (date >= moment.utc().subtract(1, 'year') && process.env.APIMODE == 'startup') ||
-                                        (date >= moment.utc().subtract(7, 'year') && process.env.APIMODE == 'grow')) {
+                                        (date >= moment.utc().subtract(1, 'years') && process.env.APIMODE == 'startup') ||
+                                        (date >= moment.utc().subtract(7, 'years') && process.env.APIMODE == 'grow')) {
                                             carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
                                 } else console.error(' Date is too old to get pricing data');
                             } else console.error(' Date must follow next syntax: dd-mm-yyyy hh-mm and can\'t be in the future');
