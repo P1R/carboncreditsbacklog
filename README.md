@@ -33,7 +33,7 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
   countryCode: 'MX' // Country code
   ccProjectID: 'GS2441', // CC project ID in the original backlog is it unique?
   ccID: 17438-328-328,
-  CCAdquisitionRecipt: 'QmYw6JTNABDDfXvc3U2BfURjF5Zzx9eG3N43wJqHc4upDL', //Recipt of CC in IPFS
+  CCAdquisitionRecipt: 'QmWWQSuPMS6aXCbZKpEjPHPUZN2NjB3YrhJTHsV4X3vb2t', //Recipt of CC in IPFS
   cancelPrice: {
     qty: 19.50, 
     divisa : 'USD'},
