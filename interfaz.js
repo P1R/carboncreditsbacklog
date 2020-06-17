@@ -57,7 +57,7 @@ const main = async () => {
                 });
                 if (showMenu == 'Show in terminal') {
                     for (element in data) {
-                        showData(data[element], 0);
+                        showData(data[element]);
                         console.log('-------------------------------------\n');
                     }
                 } else if (showMenu == 'Save as JSON') {
@@ -133,7 +133,7 @@ const main = async () => {
                                 carbonCredit.cancelPrice.qty
                             );
                             if(carbonCredit.conversionPrice === 'error') throw new Error('Error at getting currencies price.');
-                            showData(carbonCredit, 0);
+                            showData(carbonCredit);
                             serialNoPart=carbonCredit.SerialNo.split('-');
                             serialFloor=serialNoPart[7];
                             serialTop=serialNoPart[8];
@@ -148,12 +148,12 @@ const main = async () => {
                                 carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
                                 carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
                                 carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                                const fileName = moment().format();
+                                const fileName = moment.utc().format();
                                 let stream = fs.createWriteStream(path.resolve('receipts', fileName + '.txt'));
                                 stream.once('open', async function (fd) {
                                     carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
                                     const hash = await db.put(carbonCredit);
-                                    stream.write('CCID: ' + carbonCredit.CCID + ' SerialNo: ' + carbonCredit.SerialNo + '\n');
+                                    stream.write(`CCID: ${carbonCredit.CCID} SerialNo: ${carbonCredit.SerialNo} \n`);
                                     for (let i = parseInt(serialFloor) + 1; i <= serialTop; i++) {
                                         let tempCarbonCredit = {
                                             ...carbonCredit
@@ -161,6 +161,7 @@ const main = async () => {
                                         tempCarbonCredit.SerialNo = await asyncCCSerialNo(serialNoPart, i)
                                         tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
                                         const hash = await db.put(tempCarbonCredit);
+                                        stream.write(`CCID: ${tempCarbonCredit.CCID} SerialNo: ${tempCarbonCredit.SerialNo} \n`);
                                     }
                                     stream.end();
                                 });
@@ -234,11 +235,13 @@ const main = async () => {
         else if (mainMenu == 'Search carbon credits') {
             let { searchMenu } = await inquirer.prompt([{
                 type: 'list',
+                pageSize: 24,
                 name: 'searchMenu',
                 message: 'Search carbon credit by:',
                 choices: [
                     'Category',
                     'CCID',
+                    'SerialNo',
                     'Standard',
                     'Project Id',
                     'Vintage Date',
@@ -267,11 +270,37 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
-                        })
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
+                        });
                     } else {
                         console.clear();
                         console.log("No registries found")
+                    }
+                } else {
+                    console.clear();
+                    console.log('Search canceled');
+                }
+            }
+            else if (searchMenu == 'SerialNo') {
+                let { input } = await inquirer.prompt([{
+                    type: 'input',
+                    name: 'input',
+                    message: 'SerialNo: ',
+                }]);
+                let { confirm } = await inquirer.prompt([{
+                    type: 'input',
+                    name: 'confirm',
+                    message: 'Confirm y | n: ',
+                }]);
+                if (confirm == 'y') {
+                    const data = db.query((doc) => doc.SerialNo == input);
+                    for (element in data) {
+                        showData(data[element]);
+                        console.log('-------------------------------------\n');
                     }
                 } else {
                     console.clear();
@@ -290,7 +319,8 @@ const main = async () => {
                     message: 'Confirm y | n: ',
                 }]);
                 if (confirm == 'y') {
-                    console.log(db.get(input))
+                    showData(db.get(input)[0]);
+                    console.log('-------------------------------------\n');
                 } else {
                     console.clear();
                     console.log('Search canceled');
@@ -317,7 +347,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -349,7 +383,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -363,6 +401,7 @@ const main = async () => {
             else if (searchMenu == 'Vintage Date') {
                 let { vintageMenu } = await inquirer.prompt([{
                     type: 'list',
+                    pageSize: 24,
                     name: 'vintageMenu',
                     message: 'Search carbon credit by:',
                     choices: [
@@ -394,7 +433,11 @@ const main = async () => {
                                 message: 'Select CCID',
                                 choices: choicesSearch
                             }]).then(answer => {
-                                console.log(db.get(answer.CCID))
+                                let query = db.get(answer.CCID);
+                                for (element in query) {
+                                    showData(query[element]);
+                                    console.log('-------------------------------------\n');
+                                }
                             })
                         } else {
                             console.clear();
@@ -427,7 +470,11 @@ const main = async () => {
                                 message: 'Select CCID',
                                 choices: choicesSearch
                             }]).then(answer => {
-                                console.log(db.get(answer.CCID))
+                                let query = db.get(answer.CCID);
+                                for (element in query) {
+                                    showData(query[element]);
+                                    console.log('-------------------------------------\n');
+                                }
                             })
                         } else {
                             console.clear();
@@ -463,7 +510,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -574,7 +625,7 @@ const asyncCCSerialNo = async (serialNoPart, index) => {
 }
 
 //Show carbon credit data
-const showData = async (data, n) => {
+const showData = async (data, n = 0) => {
     for (element in data) {
         for (let i = 0; i < n; i++) process.stdout.write('\t');
         if (typeof (data[element]) == 'object') {
