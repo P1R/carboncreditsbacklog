@@ -5,6 +5,7 @@ let inquirer = require('inquirer');
 let moment = require('moment');
 let hasher = require('node-object-hash')
 const fs = require('fs');
+const path = require('path');
 
 const addressDB = 'decaCCDB';
 
@@ -17,6 +18,9 @@ const hashSortCoerce = hasher({ sort: true, coerce: true });
 
 //Function to start application
 const main = async () => {
+    if (!fs.existsSync('./receipts')){
+        fs.mkdirSync('./receipts');
+    }
     const orbitdb = await OrbitDB.createInstance(ipfs)
     const db = await orbitdb.docs(addressDB, { indexBy: 'CCID' });
     await db.load();
@@ -36,8 +40,10 @@ const main = async () => {
         }]);
         if (mainMenu == 'Show carbon credit records') {
             let data = db.get('');
+            console.log(` ${data.length} records found`);
             while (true) {
-                    let { showMenu } = await inquirer.prompt([{
+                const fileName = moment.utc().format();
+                let { showMenu } = await inquirer.prompt({
                     type: 'list',
                     name: 'showMenu',
                     message: 'Select an option',
@@ -45,24 +51,33 @@ const main = async () => {
                         'Show in terminal',
                         'Save as JSON',
                         'Save as CSV',
+                        'Save as TXT',
                         'Back to main menu'
                     ]
-                }]);
+                });
                 if (showMenu == 'Show in terminal') {
                     for (element in data) {
-                        showData(data[element], 0);
+                        showData(data[element]);
                         console.log('-------------------------------------\n');
                     }
                 } else if (showMenu == 'Save as JSON') {
-                    fs.writeFileSync(`/tmp/${moment().format()}.json`, JSON.stringify(data));
-                    console.log(`File saved in /tmp/${moment().format()}.json`);
+                    fs.writeFileSync(path.resolve('receipts', `${fileName}.json`), JSON.stringify(data));
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.json')}`);
                 } else if (showMenu == 'Save as CSV') {
-                    let csv = '';
-                    for (element in data) csv += await JSONToCSV(data[element]);
-                    fs.writeFileSync(`/tmp/${moment().format()}.csv`, csv);
-                    console.log(`File saved in /tmp/${moment().format()}.csv`);
-                }
-                else if (showMenu == 'Back to main menu') {
+                    let csv = await JSONToCSV(data);
+                    fs.writeFileSync(path.resolve('receipts', `${fileName}.csv`), csv);
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.csv')}`);
+                } else if (showMenu == 'Save as TXT') {
+                    let stream = fs.createWriteStream(path.resolve('receipts', `${fileName}.txt`));
+                    let result = await elemInsert(data);
+                    stream.once('open', function (fd) {
+                        for (let i = 0; i < result.length; i++) {
+                            stream.write(result[i] + '\n');
+                        }
+                        stream.end();
+                    });
+                    console.log(`File saved in ${path.resolve('receipts', fileName + '.txt')}`);
+                } else if (showMenu == 'Back to main menu') {
                     break;
                 }
             }
@@ -91,7 +106,7 @@ const main = async () => {
             }
             while (true) {
                 await init();
-                console.clear();
+                //console.clear();
                 console.log('Select one to modify the field.\n');
                 let carbonCreditMenu = await generateData(carbonCredit, 0);
                 let { insertMenu } = await inquirer.prompt([{
@@ -111,42 +126,55 @@ const main = async () => {
                 }]);
                 if (insertMenu == 'Insert current register') {
                     if (await validateInsertion(carbonCredit)) {
-                        carbonCredit.conversionPrice = await divisaTraceback(
-                            moment.utc(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(),
-                            carbonCredit.cancelPrice.divisa,
-                            carbonCredit.cancelPrice.qty
-                        );
-                        showData(carbonCredit, 0);
-                        serialNoPart=carbonCredit.SerialNo.split('-');
-                        serialFloor=serialNoPart[7];
-                        serialTop=serialNoPart[8];
-                        var totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
-                        let { input } = await inquirer.prompt([{
-                            type: 'input',
-                            name: 'input',
-                            message: 'Data is correct, you will insert '+ String(totalCC) +" carbon credits y | n:",
-                        }]);
-                        if (input == 'y') {
-                            carbonCredit.issueDate = moment(carbonCredit.issueDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
-                            carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix(); 
-                            carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
-                            const hash = await db.put(carbonCredit);
-                            console.log(`Successful insertion, CCID: ${carbonCredit.CCID}, hash: ${hash}.`);
-                            for(var i=parseInt(serialFloor)+1; i<=serialTop; i++){
-                                    var tempCarbonCredit = {...carbonCredit};
-                                    tempCarbonCredit.SerialNo= await asyncCCSerialNo(serialNoPart,i)
-                                    tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
-                                    const hash = await db.put(tempCarbonCredit);
-                                    console.log(`Successful insertion, CCID: ${tempCarbonCredit.CCID}, hash: ${hash}.`);
-                            }     
-                            console.log(`Inserted ${totalCC} carbon credits.`);
-                            break;
-                        } else {
-                            console.clear();
-                            console.log('Insertion aborted');
-                            break;
+                        try{
+                            carbonCredit.conversionPrice = await divisaTraceback(
+                                moment.utc(carbonCredit.cancelDate, 'DD-MM-YYYY HH:mm Z'),
+                                carbonCredit.cancelPrice.divisa,
+                                carbonCredit.cancelPrice.qty
+                            );
+                            if(carbonCredit.conversionPrice === 'error') throw new Error('Error at getting currencies price.');
+                            showData(carbonCredit);
+                            serialNoPart=carbonCredit.SerialNo.split('-');
+                            serialFloor=serialNoPart[7];
+                            serialTop=serialNoPart[8];
+                            let totalCC = 1+parseInt(serialTop)-parseInt(serialFloor);
+                            let { input } = await inquirer.prompt([{
+                                type: 'input',
+                                name: 'input',
+                                message: 'Data is correct, you will insert '+ String(totalCC) +" carbon credits y | n:",
+                            }]);
+                            if (input == 'y') {
+                                carbonCredit.issueDate = moment(carbonCredit.issueDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.cancelDate = moment(carbonCredit.cancelDate + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.ccVintageStart = moment(carbonCredit.ccVintageStart + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                carbonCredit.ccVintageEnd = moment(carbonCredit.ccVintageEnd + ' +0000', 'DD-MM-YYYY HH:mm Z').unix();
+                                const fileName = moment.utc().format();
+                                let stream = fs.createWriteStream(path.resolve('receipts', fileName + '.txt'));
+                                stream.once('open', async function (fd) {
+                                    carbonCredit.CCID = await hashSortCoerce.hash(carbonCredit);
+                                    const hash = await db.put(carbonCredit);
+                                    stream.write(`CCID: ${carbonCredit.CCID} SerialNo: ${carbonCredit.SerialNo} \n`);
+                                    for (let i = parseInt(serialFloor) + 1; i <= serialTop; i++) {
+                                        let tempCarbonCredit = {
+                                            ...carbonCredit
+                                        };
+                                        tempCarbonCredit.SerialNo = await asyncCCSerialNo(serialNoPart, i)
+                                        tempCarbonCredit.CCID = await hashSortCoerce.hash(tempCarbonCredit);
+                                        const hash = await db.put(tempCarbonCredit);
+                                        stream.write(`CCID: ${tempCarbonCredit.CCID} SerialNo: ${tempCarbonCredit.SerialNo} \n`);
+                                    }
+                                    stream.end();
+                                });
+                                console.log(`Inserted ${totalCC} carbon credits.`);
+                                console.log(`Receipts saved in ${path.resolve('receipts', fileName + '.txt')}`);
+                                break;
+                            } else {
+                                console.clear();
+                                console.log('Insertion aborted');
+                                continue;
+                            }
+                        } catch(e) { 
+                            console.log(`Error at divisaTraceback: ${e.message}`);
                         }
                     }
                     else {
@@ -182,12 +210,15 @@ const main = async () => {
                         if (input == '') console.log('Input mustn\'t be empty');
                         else if (insertMenu == 'issueDate' || insertMenu == 'cancelDate' || insertMenu == 'ccVintageStart' || insertMenu == 'ccVintageEnd') {
                             const date = moment.utc(input + ' +0000', 'DD-MM-YYYY HH:mm');
-                            if (date.isValid() && insertMenu == 'cancelDate' && moment() >= date && date >= moment().subtract(10, 'days')) {
-                                carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
-                            }
-                            else if (date.isValid() && insertMenu != 'cancelDate' && moment() >= date) {
-                                carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
-                            } else console.log(' Date must follow next syntax: dd-mm-yyyy hh-mm and cancel date must be 10 days old at most');
+                            console.log(date);
+                            if(date.isValid() && moment.utc() >= date) {
+                                if(insertMenu != 'cancelDate') carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
+                                else if((date >= moment.utc().subtract(3, 'months') && process.env.APIMODE == 'dev') ||
+                                        (date >= moment.utc().subtract(1, 'years') && process.env.APIMODE == 'startup') ||
+                                        (date >= moment.utc().subtract(7, 'years') && process.env.APIMODE == 'grow')) {
+                                            carbonCredit[insertMenu] = date.format('DD-MM-YYYY HH:mm Z');
+                                } else console.error(' Date is too old to get pricing data');
+                            } else console.error(' Date must follow next syntax: dd-mm-yyyy hh-mm and can\'t be in the future');
                         }
                         else if (insertMenu == 'qty') {
                             if (parseFloat(input)) carbonCredit.cancelPrice[insertMenu] = input;
@@ -204,11 +235,13 @@ const main = async () => {
         else if (mainMenu == 'Search carbon credits') {
             let { searchMenu } = await inquirer.prompt([{
                 type: 'list',
+                pageSize: 24,
                 name: 'searchMenu',
                 message: 'Search carbon credit by:',
                 choices: [
                     'Category',
                     'CCID',
+                    'SerialNo',
                     'Standard',
                     'Project Id',
                     'Vintage Date',
@@ -237,11 +270,37 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
-                        })
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
+                        });
                     } else {
                         console.clear();
                         console.log("No registries found")
+                    }
+                } else {
+                    console.clear();
+                    console.log('Search canceled');
+                }
+            }
+            else if (searchMenu == 'SerialNo') {
+                let { input } = await inquirer.prompt([{
+                    type: 'input',
+                    name: 'input',
+                    message: 'SerialNo: ',
+                }]);
+                let { confirm } = await inquirer.prompt([{
+                    type: 'input',
+                    name: 'confirm',
+                    message: 'Confirm y | n: ',
+                }]);
+                if (confirm == 'y') {
+                    const data = db.query((doc) => doc.SerialNo == input);
+                    for (element in data) {
+                        showData(data[element]);
+                        console.log('-------------------------------------\n');
                     }
                 } else {
                     console.clear();
@@ -260,7 +319,8 @@ const main = async () => {
                     message: 'Confirm y | n: ',
                 }]);
                 if (confirm == 'y') {
-                    console.log(db.get(input))
+                    showData(db.get(input)[0]);
+                    console.log('-------------------------------------\n');
                 } else {
                     console.clear();
                     console.log('Search canceled');
@@ -287,7 +347,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -319,7 +383,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -333,6 +401,7 @@ const main = async () => {
             else if (searchMenu == 'Vintage Date') {
                 let { vintageMenu } = await inquirer.prompt([{
                     type: 'list',
+                    pageSize: 24,
                     name: 'vintageMenu',
                     message: 'Search carbon credit by:',
                     choices: [
@@ -364,7 +433,11 @@ const main = async () => {
                                 message: 'Select CCID',
                                 choices: choicesSearch
                             }]).then(answer => {
-                                console.log(db.get(answer.CCID))
+                                let query = db.get(answer.CCID);
+                                for (element in query) {
+                                    showData(query[element]);
+                                    console.log('-------------------------------------\n');
+                                }
                             })
                         } else {
                             console.clear();
@@ -397,7 +470,11 @@ const main = async () => {
                                 message: 'Select CCID',
                                 choices: choicesSearch
                             }]).then(answer => {
-                                console.log(db.get(answer.CCID))
+                                let query = db.get(answer.CCID);
+                                for (element in query) {
+                                    showData(query[element]);
+                                    console.log('-------------------------------------\n');
+                                }
                             })
                         } else {
                             console.clear();
@@ -433,7 +510,11 @@ const main = async () => {
                             message: 'Select CCID',
                             choices: choicesSearch
                         }]).then(answer => {
-                            console.log(db.get(answer.CCID))
+                            let query = db.get(answer.CCID);
+                            for (element in query) {
+                                showData(query[element]);
+                                console.log('-------------------------------------\n');
+                            }
                         })
                     } else {
                         console.clear();
@@ -514,6 +595,14 @@ const elemSearch = async (objectSearch) => {
     return elems;
 }
 
+const elemInsert = async (objectShow) => {
+    let elems = [];
+    for (let key in objectShow) {
+        elems.push('CCID: ' + objectShow[key]['CCID'] + ' SerialNumber: ' + objectShow[key]['SerialNo']);
+    }
+    return elems;
+}
+
 const generateData = async (data, n) => {
     let menu = [];
     let tab = '    '.repeat(n);
@@ -522,7 +611,7 @@ const generateData = async (data, n) => {
             menu.push({ name: element, disabled: ' ' });
             menu = menu.concat(await generateData(data[element], n + 1));
         } else {
-            let space = ' '.repeat(20 - element.length);
+            let space = ' '.repeat(25 - element.length);
             space = space.substring(0, space.length - tab.length);
             menu.push(`${tab}${element}${space}${data[element]}`);
         }
@@ -536,7 +625,7 @@ const asyncCCSerialNo = async (serialNoPart, index) => {
 }
 
 //Show carbon credit data
-const showData = async (data, n) => {
+const showData = async (data, n = 0) => {
     for (element in data) {
         for (let i = 0; i < n; i++) process.stdout.write('\t');
         if (typeof (data[element]) == 'object') {
@@ -575,14 +664,28 @@ const showErrorData = async (data) => {
 
 //Parse json to csv
 const JSONToCSV = async (data, n) => {
-    let csv = '';
-    for (element in data) {
-        if (typeof (data[element]) == 'object') {
-            validateInsertion(data[element]);
+    let csv;
+    for (element in data[0]) {
+        console.log(typeof(data[0][element]));
+        console.log(data[0][element]);
+        if (typeof data[0][element] == 'object') {
+            console.log('Entro aqui')
+            for(subelement in data[0][element]) csv += `${element} - ${subelement}, `;
         }
-        else csv += `${data[element]}, `
+        else csv += `${element}, `;
     }
-    if (n == 0) csv += '\n';
+    csv = csv.slice(0, -2); 
+    csv += '\n';
+    for(record in data) {
+        for (element in data[record]) {
+            if (typeof data[record][element] == 'object') {
+                for(subelement in data[0][element]) csv += `${data[record][element][subelement]}, `;
+            }
+            else csv += `${data[record][element]}, `;
+        }
+        csv = csv.slice(0, -2); 
+        csv += '\n';
+    }
     return csv;
 }
 
