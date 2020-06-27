@@ -2,8 +2,8 @@
 Description=Public Node Updater
 
 [Service]
-WorkingDirectory=/home/nodemaster/orbitdb4cc/
-ExecStart=/usr/local/bin/node /home/nodemaster/orbitdb4cc/index.js
+WorkingDirectory=/home/nodemaster/carboncreditsbacklog/
+ExecStart=/usr/local/bin/node /home/nodemaster/carboncreditsbacklog/index.js
 User=nodemaster
 Restart=always
 LimitNOFILE=10240

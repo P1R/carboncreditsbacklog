@@ -5,7 +5,7 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
 **IMPORTANT: Please verify that the database address matches the smart contract address**
 
 
-# OrbitDB4CC
+# CarbonCreditsBacklog
 
 
 <p align="center">
@@ -143,8 +143,8 @@ OrbitDB is a **serverless, distributed, peer-to-peer database**. OrbitDB uses [I
 **Clone the repo**
 
 ```sh
- $ git clone https://gitlab.com/deca-currency/decascarboncreditsbacklog.git
- $ cd orbitdb4cc
+ $ git clone https://gitlab.com/deca-currency/carboncreditsbacklog.git
+ $ cd carboncreditsbacklog
 ```
 
 **Install the dependencies:**
@@ -220,7 +220,7 @@ that holds this repository and that runs the orbitdb.
 *Append the following line at the end of the editor and write it*
 
 ```sh
-0,5,10,15,20,25,30,35,40,45,50,55 * * * * sleep 28 ; /home/nodemaster/orbitdb4cc/connectNodes.sh >> /tmp/NodeStatus.log  2>&1 &
+0,5,10,15,20,25,30,35,40,45,50,55 * * * * sleep 28 ; /home/nodemaster/carboncreditsbacklog/connectNodes.sh >> /tmp/NodeStatus.log  2>&1 &
 ```
 **NOTE: in this example the path is nodemaster user directory, you should change it with your username and the path to the script connectNodes.sh**
 
@@ -256,8 +256,8 @@ connect QmZL1otpiCzWMEJTHXbQ5Hb4aFE7TKLjAuuBAAet1WAgtD success
 Description=Public Node Updater
 
 [Service]
-WorkingDirectory=/home/nodemaster/orbitdb4cc/
-ExecStart=/usr/local/bin/node /home/nodemaster/orbitdb4cc/index.js
+WorkingDirectory=/home/nodemaster/carboncreditsbacklog/
+ExecStart=/usr/local/bin/node /home/nodemaster/carboncreditsbacklog/index.js
 User=nodemaster
 Restart=always
 LimitNOFILE=10240
@@ -268,9 +268,9 @@ WantedBy=multi-user.target
 ```
 **NOTE: in this example user that runs ipfs, node and orbitdb instance is nodemaster, also the node location is at /usr/local/bin/node**
 
-**NOTE1: set WorkingDirectory where is the repository, for this example /home/nodemaster/orbitdb4cc/**
+**NOTE1: set WorkingDirectory where is the repository, for this example /home/nodemaster/carboncreditsbacklog/**
 
-**NOTE2: set where is index.js mostly in the repository as follow path to node path, for this example /home/nodemaster/orbitdb4cc/index.js**
+**NOTE2: set where is index.js mostly in the repository as follow path to node path, for this example /home/nodemaster/carboncreditsbacklog/index.js**
 
 > Enable the service
 
