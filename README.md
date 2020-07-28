@@ -1,18 +1,19 @@
-# DECASCarbonCreditsBacklog
+# CarbonCreditsBacklog
 
 DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting up a node.
 
 **IMPORTANT: Please verify that the database address matches the smart contract address**
 
+## Table of Contents
 
-# CarbonCreditsBacklog
+[[_TOC_]]
 
 
 <p align="center">
   <img src="images/diagram.png" width="720" />
 </p>
 
-## Carbon Credit Structure
+## A Carbon Credit Structure (Example):
 
 ```sh
 /*
@@ -54,9 +55,9 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
 ## Requirements
 
 * Node.js >= 12
-* IPFS Daemon
+* IPFS Daemon 0.4.23
 
-## Instalation
+## Installation
 
 **Download and install Node.js v12.x and npm.**
 
@@ -77,13 +78,15 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
 
 * IPFS Daemon
 
-> Go to and download for your platform https://dist.ipfs.io/#go-ipfs
+> Download and install go-ipfs v0.4.23 into your architecture 
 
 ```sh
+ $ wget https://dist.ipfs.io/go-ipfs/v0.4.23/go-ipfs_v0.4.23_linux-amd64.tar.gz
  $ tar xvfz go-ipfs.tar.gz
  $ cd go-ipfs
  $ ./install.sh
 ```
+**Note: In this example we use amd64(x86_64) architecture, for a diferent one go [here](https://dist.ipfs.io/go-ipfs/v0.4.23)** 
 
 > Test
 
@@ -95,6 +98,67 @@ DECA's Carbon Credits OrbitDB Code and configs, everything you need for setting 
 
 ```sh
  $ ipfs init
+```
+
+
+> It is necessary to enable [circle relay](https://github.com/ipfs/js-ipfs/tree/master/examples/circuit-relaying) in the node to be able to replicate the database to react with js-ipfs for it is necessary to use the following configuration
+
+```sh
+ $ vim ~/.ipfs/config
+   "Swarm": {
+    "AddrFilters": null,
+    "ConnMgr": {
+      "GracePeriod": "20s",
+      "HighWater": 900,
+      "LowWater": 600,
+      "Type": "basic"
+    },
+    "DisableBandwidthMetrics": false,
+    "DisableNatPortMap": false,
+    "DisableRelay": false,
+    "EnableRelayHop": true
+    }
+```
+
+>We also need to make sure our go node can be dialed from the browser. For that, we need to enable a transport that both the browser and the go node can communicate over. We will use the web sockets transport.
+
+>To enable the transport and set the interface and port we need to edit the ~/.ipfs/config one more time. Let's find the Swarm array and add our desired address there.
+
+```sh
+ $ vim ~/.ipfs/config
+  "Swarm": [
+    "/ip4/0.0.0.0/tcp/4001",
+    "/ip4/0.0.0.0/tcp/4004/ws",
+    "/ip6/::/tcp/4001"
+  ],
+
+```
+
+
+# [OrbitDB](https://github.com/orbitdb/orbit-db)
+
+OrbitDB is a **serverless, distributed, peer-to-peer database**. OrbitDB uses [IPFS](https://ipfs.io) as its data storage and [IPFS Pubsub](https://github.com/ipfs/go-ipfs/blob/master/core/commands/pubsub.go#L23) to automatically sync databases with peers. It's an eventually consistent database that uses [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) for conflict-free database merges making OrbitDB an excellent choice for decentralized apps (dApps), blockchain applications and offline-first web applications.
+
+## Usage local 
+
+**Clone the repo**
+
+```sh
+ $ git clone https://gitlab.com/deca-currency/carboncreditsbacklog.git
+ $ cd carboncreditsbacklog
+```
+
+**Install the dependencies:**
+
+```sh
+ $ npm install 
+```
+
+### InterPlanetary File System (IPFS) Configs: 
+**Start IPFS Daemon** (Note: pubsub-experiment is necesary to work with OrbitDB)
+
+```sh
+ $ ipfs daemon --enable-pubsub-experiment
 ```
 
 > Configure ipfs as a service, set your self in the repository directory and do as follows: 
@@ -127,37 +191,11 @@ WantedBy=multi-user.target
 ```sh
  $ sudo systemctl daemon-reload
  $ sudo systemctl enable ipfs.service
- $ sudo systemctl start publicNode.service
+ $ sudo systemctl start ipfs.service
  $ sudo systemctl status ipfs.service
 ```
 **NOTE: service must be set as active (running), if not please verify the preview steps**
 
-
-
-# [OrbitDB](https://github.com/orbitdb/orbit-db)
-
-OrbitDB is a **serverless, distributed, peer-to-peer database**. OrbitDB uses [IPFS](https://ipfs.io) as its data storage and [IPFS Pubsub](https://github.com/ipfs/go-ipfs/blob/master/core/commands/pubsub.go#L23) to automatically sync databases with peers. It's an eventually consistent database that uses [CRDTs](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type) for conflict-free database merges making OrbitDB an excellent choice for decentralized apps (dApps), blockchain applications and offline-first web applications.
-
-## Usage local 
-
-**Clone the repo**
-
-```sh
- $ git clone https://gitlab.com/deca-currency/carboncreditsbacklog.git
- $ cd carboncreditsbacklog
-```
-
-**Install the dependencies:**
-
-```sh
- $ npm install 
-```
-
-**Start IPFS Daemon** (Note: pubsub-experiment is necesary to work with OrbitDB)
-
-```sh
- $ ipfs daemon --enable-pubsub-experiment
-```
 
 **Start the DecaCC Interface**
 
@@ -167,7 +205,7 @@ OrbitDB is a **serverless, distributed, peer-to-peer database**. OrbitDB uses [I
 
 **Note: With this you can use OrbitDB but only in your local node**
 
-## Usage with replication
+## Usage with replication (optional)
 
 You need to do all the past steps.
 
@@ -237,9 +275,9 @@ connect QmZL1otpiCzWMEJTHXbQ5Hb4aFE7TKLjAuuBAAet1WAgtD success
 ```
 **NOTE: it is possible that you won't connect at the first try with most of the nodes, so you can wait for 10 or 15 minutes to verify again**
 
-# For Public NODES updater as service
+## For Public NODES updater as service
 
-## This is in case you want to have a node that is just for public access and constantly replicating the last data in orbit DB
+### This is in case you want to have a node that is just for public access and constantly replicating the last data in orbit DB
 
 > Configure public nodes updater service, set your self in the repository directory and do as follows: 
 
@@ -282,7 +320,75 @@ WantedBy=multi-user.target
 ```
 **NOTE: service must be set as active (running), if not please verify the preview steps**
 
-# IPFS pin projects receipts
+# Configure WebSocket on IPFS
+
+You can help us to increase the speed of replication of the database at react [DECA Carbon Credits](http://search.deca.green/). To do this, once the node is configured as a service and the database is replicated, it is necessary to enable the connection through WebSocket Secure to do so in order to have a DNS.
+
+### Requirements
+
+* Nginx >= 1.14.0
+* Certbot >= 1.6
+
+Install Nginx 
+
+```sh
+   $ sudo apt update
+   $ sudo apt install nginx
+``` 
+
+Install Certbot
+
+```sh
+   $ sudo add-apt-repository ppa:certbot/certbot
+   $ sudo apt update
+   $ sudo apt install python-certbot-nginx
+```
+
+
+> In a nginx configuration add the proxy pass to the websocket. 
+
+```sh
+ $ vim /etc/nginx/conf.d/example.com.conf
+server {
+    listen         80 default_server;
+    listen         [::]:80 default_server;
+    server_name    example.com www.example.com;
+    root           /var/www/example.com;
+    index          index.html;
+    try_files $uri /index.html;
+    location /  {
+        proxy_pass http://localhost:4004;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+### Add SSL Certificate
+
+**This is necessary because otherwise the web browser will not be able to connect to the WebSocket**
+
+```sh
+ $ sudo certbot --nginx -d example.com
+```
+
+
+Finally renew the certificate with the following command and restart nginx
+
+```sh
+$ sudo certbot renew --dry-run
+$ sudo service nginx restart
+```
+
+**Remember to open the port in the firewall**
+
+**Now restart up Nginx!**
+
+
+# IPFS pin projects receipt
 
 **You can help us by pinning  DECA's project receipts into IPFS which will give deeper trust to DECA.**
 
@@ -316,3 +422,29 @@ QmYw6JTNABDDfXvc3U2BfURjF5Zzx9eG3N43wJqHc4upDL
 ```
 
 As you can see in the above example we pin the receipt by running " ./receipts.sh ", also we Download this receipt with should be allocated in the directory projects Receipts.
+
+***
+# License
+
+[**GPLV3**](./LICENSE).
+
+# Information and contacts.
+***Gitter***
+https://gitter.im/deca-currency/community
+
+***Developers***
+- Jose [jose@deca.eco](mailto:jose@deca.eco)
+- David [david@deca.eco](mailto:david@deca.eco)
+
+## ToDo
+ - Update OrbitDB with IPFS 5.0 support
+ - Update to IPFS 5.0
+ - Create a LXC or a Docker.
+
+## References:
+
+[**OrbitDB**](https://youtu.be/CjYKrbq8BCw)
+
+[**SSL in the Server**](http://werkzeug.pocoo.org/docs/0.14/serving/)
+
+[**SSL in Client**](http://steven.casagrande.io/articles/python-requests-and-ssl/)
